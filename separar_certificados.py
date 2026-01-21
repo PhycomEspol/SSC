@@ -37,6 +37,46 @@ CARPETA_SALIDA = "salida"
 ARCHIVO_PATRONES = "patrones.txt"
 
 
+def limpiar_carpeta_salida():
+    """
+    Elimina todos los archivos PDF de la carpeta de salida antes de procesar.
+    """
+    carpeta_salida = Path(__file__).parent / CARPETA_SALIDA
+    
+    if not carpeta_salida.exists():
+        return 0
+    
+    archivos_pdf = list(carpeta_salida.glob("*.pdf"))
+    eliminados = 0
+    
+    for archivo in archivos_pdf:
+        try:
+            archivo.unlink()
+            eliminados += 1
+        except Exception as e:
+            print(f"⚠️  No se pudo eliminar {archivo.name}: {e}")
+    
+    if eliminados > 0:
+        print(f"🗑️  Se eliminaron {eliminados} archivo(s) de la carpeta 'salida/'")
+    
+    return eliminados
+
+
+def eliminar_pdf_entrada(ruta_pdf: str):
+    """
+    Elimina un PDF de la carpeta de entrada después de procesarlo.
+    """
+    try:
+        archivo = Path(ruta_pdf)
+        if archivo.exists():
+            archivo.unlink()
+            print(f"🗑️  Eliminado de entrada: {archivo.name}")
+            return True
+    except Exception as e:
+        print(f"⚠️  No se pudo eliminar {ruta_pdf}: {e}")
+    return False
+
+
 def limpiar_nombre_archivo(nombre: str) -> str:
     """
     Limpia el nombre para que sea válido como nombre de archivo.
@@ -293,10 +333,19 @@ def separar_certificados(
 def procesar_carpeta_entrada(
     lista_nombres: list = None,
     prefijo: str = "",
-    sufijo: str = ""
+    sufijo: str = "",
+    limpiar_salida: bool = True,
+    eliminar_entrada: bool = True
 ) -> list:
     """
     Procesa todos los PDFs en la carpeta de entrada.
+    
+    Args:
+        lista_nombres: Lista opcional de nombres para renombrar
+        prefijo: Prefijo para agregar al nombre de cada archivo
+        sufijo: Sufijo para agregar al nombre de cada archivo
+        limpiar_salida: Si True, elimina los PDFs existentes en salida antes de procesar
+        eliminar_entrada: Si True, elimina los PDFs de entrada después de procesarlos
     """
     carpeta_entrada = Path(__file__).parent / CARPETA_ENTRADA
     carpeta_salida = Path(__file__).parent / CARPETA_SALIDA
@@ -315,8 +364,13 @@ def procesar_carpeta_entrada(
     
     print(f"\n🔍 Encontrados {len(archivos_pdf)} archivo(s) PDF en 'entrada/'")
     
+    # Limpiar carpeta de salida antes de procesar
+    if limpiar_salida:
+        limpiar_carpeta_salida()
+    
     todos_resultados = []
     patrones = cargar_patrones()
+    pdfs_procesados = []  # Lista de PDFs procesados exitosamente
     
     for pdf in archivos_pdf:
         try:
@@ -329,8 +383,19 @@ def procesar_carpeta_entrada(
                 sufijo=sufijo
             )
             todos_resultados.append(resultado)
+            
+            # Si no hubo errores, marcar para eliminar
+            if not resultado["errores"]:
+                pdfs_procesados.append(str(pdf))
+                
         except Exception as e:
             print(f"❌ Error procesando {pdf.name}: {e}")
+    
+    # Eliminar PDFs de entrada después de procesar exitosamente
+    if eliminar_entrada and pdfs_procesados:
+        print(f"\n🗑️  Limpiando carpeta de entrada...")
+        for pdf_path in pdfs_procesados:
+            eliminar_pdf_entrada(pdf_path)
     
     return todos_resultados
 
@@ -402,6 +467,18 @@ Ejemplos de uso:
         help="Muestra los patrones de búsqueda configurados"
     )
     
+    parser.add_argument(
+        "--no-limpiar",
+        action="store_true",
+        help="No eliminar archivos de salida antes de procesar"
+    )
+    
+    parser.add_argument(
+        "--no-borrar-entrada",
+        action="store_true",
+        help="No eliminar PDFs de entrada después de procesarlos"
+    )
+    
     args = parser.parse_args()
     
     # Mostrar patrones si se solicita
@@ -437,7 +514,9 @@ Ejemplos de uso:
             resultados = procesar_carpeta_entrada(
                 lista_nombres=lista_nombres,
                 prefijo=args.prefijo,
-                sufijo=args.sufijo
+                sufijo=args.sufijo,
+                limpiar_salida=not args.no_limpiar,
+                eliminar_entrada=not args.no_borrar_entrada
             )
             if not resultados:
                 sys.exit(1)
