@@ -1,0 +1,18 @@
+# Patrones de búsqueda para extraer nombres de certificados
+# ============================================================
+# Cada línea es un patrón que el sistema usará para buscar el nombre.
+# El nombre debe estar capturado con (.+?) en el patrón.
+# Las líneas que comienzan con # son comentarios y se ignoran.
+# El sistema probará cada patrón en orden hasta encontrar uno que funcione.
+
+# Patrón para certificados PHYLIVE
+Se otorga el presente reconocimiento a:\s*\n?\s*(.+?)(?:\n|Por su)
+
+# Patrones comunes para otros certificados
+Se otorga el presente reconocimiento a:\s*(.+?)(?:\n|$)
+[Oo]torga(?:do)? a:\s*(.+?)(?:\n|$)
+[Cc]ertifica(?:do)? a:\s*(.+?)(?:\n|$)
+[Cc]ertificamos que:\s*(.+?)(?:\n|$)
+[Aa] nombre de:\s*(.+?)(?:\n|$)
+[Pp]or el presente se certifica que\s*(.+?)(?:\n|ha|$)
+[Hh]ace constar que\s*(.+?)(?:\n|$)
